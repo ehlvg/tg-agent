@@ -24,3 +24,5 @@ ENV PYTHONUNBUFFERED=1
 
 # Run the bot
 CMD ["python", "bot.py"]
+
+EXPOSE 8000
