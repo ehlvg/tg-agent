@@ -19,9 +19,6 @@ RUN pip install --no-cache-dir -r requirements.txt || \
 # Copy bot code
 COPY bot.py ./
 
-# Copy .env file if present (optional, for local dev)
-COPY .env ./
-
 # Set environment variables (override in production)
 ENV PYTHONUNBUFFERED=1
 
