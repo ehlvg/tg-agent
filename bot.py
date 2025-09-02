@@ -181,8 +181,11 @@ class TelegramBot:
         await self.process_message(update, question)
     
     async def handle_message(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        """Handle regular text messages."""
-        message = update.message
+        """Handle regular text messages and edited messages."""
+        message = update.message or update.edited_message
+        
+        if message is None or not message.text:
+            return
         
         # In private chat, respond to all messages
         if message.chat.type == 'private':
@@ -191,7 +194,7 @@ class TelegramBot:
         # In groups, only respond when mentioned
         elif message.chat.type in ['group', 'supergroup']:
             bot_username = context.bot.username
-            if f'@{bot_username}' in message.text:
+            if bot_username and f'@{bot_username}' in message.text:
                 # Remove the mention from the text
                 text = message.text.replace(f'@{bot_username}', '').strip()
                 if text:
@@ -199,10 +202,15 @@ class TelegramBot:
     
     async def process_message(self, update: Update, user_message: str) -> None:
         """Process user message and get AI response."""
-        chat_id = update.effective_chat.id
+        message = update.message or update.edited_message
+        if message is None:
+            logger.error("No message found in update")
+            return
+            
+        chat_id = message.chat.id
         
         # Show typing indicator
-        await update.effective_chat.send_action(action="typing")
+        await message.chat.send_action(action="typing")
         
         try:
             # Add user message to context
@@ -226,19 +234,19 @@ class TelegramBot:
             self.conversation_manager.add_message(chat_id, 'assistant', response_text, message_id)
             
             # Send response
-            await update.message.reply_text(response_text)
+            await message.reply_text(response_text)
             
         except Exception as e:
             logger.error(f"Error processing message: {e}")
-            await update.message.reply_text(
+            await message.reply_text(
                 f"Sorry, an error occurred: {str(e)}"
             )
     
-    async def error_handler(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    async def error_handler(self, update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
         """Log errors and notify user."""
         logger.error(f"Update {update} caused error {context.error}")
         
-        if update and update.effective_message:
+        if isinstance(update, Update) and update.effective_message:
             await update.effective_message.reply_text(
                 "An error occurred while processing your request. Please try again."
             )
